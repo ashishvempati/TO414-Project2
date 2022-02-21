@@ -18,8 +18,13 @@ When you click the **Knit** button a document will be generated that includes bo
 ```{r cars}
 summary(cars)
 
+<<<<<<< HEAD
 ddd
 ff
+=======
+
+Hi!!!!
+>>>>>>> 9fc3429183b0ceb2fc9c270e50f61d2f8111bd0c
 ```
 
 ## Including Plots
