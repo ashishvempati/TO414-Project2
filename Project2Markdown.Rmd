@@ -1,6 +1,6 @@
 ---
 title: "Project2Markdown"
-author: "Ashish Vempati"
+author: "Ashish Vempati, Giovanni Iurlandino, Ehani Patel, Rashmita Gandhe, Ketaki Gaikwad"
 date: "2/21/2022"
 output: html_document
 ---
