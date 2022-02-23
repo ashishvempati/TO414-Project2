@@ -8,3 +8,4 @@ output: html_notebook
 ## Ashish Vempati
 ## Ketaki Gaikwad
 ## Giovanni Iurlandino
+## Ehani Patel
