@@ -118,7 +118,7 @@ ann_wq_model <- neuralnet(formula = wq_train_labels ~ .,
                               data = wq_train)
 
 # Plot ANN Model
-plot(ann_wq_model)
+#plot(ann_wq_model)
 ```
 
 ```{r}
@@ -142,7 +142,7 @@ ann_wq_model2 <- neuralnet(formula = wq_train_labels ~ .,
                               data = wq_train, hidden = 3)
 
 # Plot ANN Model
-plot(ann_wq_model2)
+#plot(ann_wq_model2)
 ```
 
 ```{r}
@@ -268,12 +268,12 @@ combined_test <- combined_df[test_set, ]
 
 ```{r}
 # create a cost matrix
-error_cost <- matrix(c(0, 1, 4, 0), nrow = 2)
+error_cost <- matrix(c(0, 1, 1.25, 0), nrow = 2)
 error_cost
 
 # apply the cost matrix to the tree
 combined_cost <- C5.0(combined_train[-7], as.factor(combined_train$wq_test_labels),
-                          costs = error_cost, trials = 1)
+                           costs = error_cost ,trials = 100)
 combined_cost_pred <- predict(combined_cost, combined_test)
 
 ## Run Confusion Matrix
