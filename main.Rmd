@@ -14,6 +14,10 @@ library(neuralnet)
 library(gmodels)
 library(class)
 library(caret)
+library(kernlab)
+library(C50)
+library(MASS) #for stepAIC()
+library(randomForest)
 ```
 
 # Preliminary Analysis
@@ -60,6 +64,46 @@ wq_test <- wq_norm[test_set, -match("Potability",names(wq_norm))]
 # Now the response (aka Labels) - only the Potability column
 wq_train_labels <- wq_norm[-test_set, "Potability"]
 wq_test_labels <- wq_norm[test_set, "Potability"]
+```
+
+------------------------------------------------------------------------
+
+# Build Logistic Regression
+
+```{r}
+# Initial Model With All Variables
+lg_model1 <- glm(wq_train_labels ~ ., data = wq_train, family = binomial(link='logit'))
+summary(lg_model1)
+```
+
+```{r}
+# Predict Test Data with Logistical Regression q
+lg_predict <- predict(lg_model1, newdata = wq_test, response = "response")
+
+# Set the Threshold to the median of all predicted probabilities to adjust for the lower probabilities that are being calculated
+threshold = median(lg_predict)
+lg_predict <- ifelse(lg_predict > threshold, 1, 0)
+
+# Evaluate Model Results
+confusionMatrix(as.factor(lg_predict),as.factor(wq_test_labels), positive = "1")
+```
+
+```{r}
+# Filtered Model with Significant Variables from Model 1 (just Solids)
+lg_model2 <- glm(wq_train_labels ~ Solids, data = wq_train, family = binomial(link='logit'))
+summary(lg_model2)
+```
+
+```{r}
+# Predict Test Data with Logistical Regression q
+lg_predict2 <- predict(lg_model2, newdata = wq_test, response = "response")
+
+# Set the Threshold to the median of all predicted probabilities to adjust for the lower probabilities that are being calculated
+threshold2 = median(lg_predict2)
+lg_predict2 <- ifelse(lg_predict2 > threshold2, 1, 0)
+
+# Evaluate Model Results
+confusionMatrix(as.factor(lg_predict2),as.factor(wq_test_labels), positive = "1")
 ```
 
 ------------------------------------------------------------------------
@@ -114,42 +158,128 @@ ann_wq_test_predict2 <- ifelse(ann_wq_test_predict2 > threshold , 1, 0)
 confusionMatrix(as.factor(ann_wq_test_predict2),as.factor(wq_test_labels), positive = "1")
 ```
 
+## With 5 Neurons
+
+```{r}
+# Create ANN Model
+ann_wq_model3 <- neuralnet(formula = wq_train_labels ~ .,
+                              data = wq_train, hidden = 5, stepmax = 1e8)
+
+```
+
+```{r}
+## Evaluate Model Results
+ann_wq_test_predict3 <- predict(ann_wq_model3, wq_test, type = 'Potabality')
+
+# Set the Threshold to the median of all predicted probabilities to adjust for the lower probabilities that are being calculated
+threshold = median(ann_wq_test_predict3)
+ann_wq_test_predict3 <- ifelse(ann_wq_test_predict3 > threshold , 1, 0)
+
+
+# Run Confusion Matrix
+confusionMatrix(as.factor(ann_wq_test_predict3),as.factor(wq_test_labels), positive = "1")
+```
+
 ------------------------------------------------------------------------
 
-# Build Logistic Regression
-
+# Creating KNN Model
 ```{r}
-# Initial Model With All Variables
-lg_model1 <- glm(wq_train_labels ~ ., data = wq_train, family = binomial(link='logit'))
-summary(lg_model1)
+# Create KNN Model
+sqrt(nrow(wq))
+
+knn_pred <- knn(train = wq_train, test = wq_test,
+                      cl = wq_train_labels, k=57)
 ```
 
 ```{r}
-# Predict Test Data with Logistical Regression q
-lg_predict <- predict(lg_model1, newdata = wq_test, response = "response")
-
-# Set the Threshold to the median of all predicted probabilities to adjust for the lower probabilities that are being calculated
-threshold = median(lg_predict)
-lg_predict <- ifelse(lg_predict > threshold, 1, 0)
-
 # Evaluate Model Results
-confusionMatrix(as.factor(lg_predict),as.factor(wq_test_labels), positive = "1")
+confusionMatrix(as.factor(knn_pred), as.factor(wq_test_labels), positive = "1")
+```
+
+------------------------------------------------------------------------
+
+# Creating SVM Model
+```{r}
+# Build SVM Model
+svm_model <- ksvm(wq_train_labels ~ ., data = wq_train, kernel = "rbfdot")
+svm_model
 ```
 
 ```{r}
-# Filtered Model with Significant Variables from Model 1 (just Solids)
-lg_model2 <- glm(wq_train_labels ~ Solids, data = wq_train, family = binomial(link='logit'))
-summary(lg_model2)
+# Test Accuracy of SVM Model
+## Evaluate Model Results
+svm_model_pred <- predict(svm_model, wq_test)
+svm_model_pred <- ifelse(svm_model_pred > 0.5 , 1, 0)
+
+## Run Confusion Matrix
+confusionMatrix(as.factor(svm_model_pred), as.factor(wq_test_labels), positive = "1")
+```
+
+------------------------------------------------------------------------
+
+# Creating Decision Tree Model
+```{r}
+# Build Decision Tree Model
+wq_tree_model <- C5.0(wq_train, as.factor(wq_train_labels), trials = 1)
+
+# Decision Tree Predictions
+dt_predict <- predict(wq_tree_model, wq_test)
+summary(dt_predict)
+
 ```
 
 ```{r}
-# Predict Test Data with Logistical Regression q
-lg_predict2 <- predict(lg_model2, newdata = wq_test, response = "response")
+## Run Confusion Matrix
+confusionMatrix(as.factor(dt_predict),as.factor(wq_test_labels), positive = "1")
+```
 
-# Set the Threshold to the median of all predicted probabilities to adjust for the lower probabilities that are being calculated
-threshold2 = median(lg_predict2)
-lg_predict2 <- ifelse(lg_predict2 > threshold2, 1, 0)
+------------------------------------------------------------------------
 
-# Evaluate Model Results
-confusionMatrix(as.factor(lg_predict2),as.factor(wq_test_labels), positive = "1")
+# Create Random Forest
+```{r}
+# Build Random Forest Model
+rf_tree_model <- randomForest(wq_train, as.factor(wq_train_labels), trials = 100)
+
+# Random Forest Predictions
+rf_predict <- predict(rf_tree_model, wq_test)
+summary(rf_predict)
+
+```
+
+```{r}
+## Run Confusion Matrix
+confusionMatrix(as.factor(rf_predict),as.factor(wq_test_labels), positive = "1")
+```
+
+------------------------------------------------------------------------
+
+# Level 2 Stacked Model
+```{r}
+# Create Combined Dataframe
+combined_df <- data.frame(lg_predict, knn_pred, ann_wq_test_predict2, svm_model_pred, dt_predict, rf_predict, wq_test_labels)
+```
+
+```{r}
+# Split Combined Dataframe into Test and Train Subsets
+test_set <- sample(1:nrow(combined_df), 100) 
+combined_train <- combined_df[-test_set, ]
+combined_test <- combined_df[test_set, ]
+```
+
+```{r}
+# create a cost matrix
+error_cost <- matrix(c(0, 1, 4, 0), nrow = 2)
+error_cost
+
+# apply the cost matrix to the tree
+combined_cost <- C5.0(combined_train[-7], as.factor(combined_train$wq_test_labels),
+                          costs = error_cost, trials = 1)
+combined_cost_pred <- predict(combined_cost, combined_test)
+
+## Run Confusion Matrix
+confusionMatrix(combined_cost_pred, as.factor(combined_test$wq_test_labels), positive = "1")
+```
+
+```{r}
+plot(combined_cost)
 ```
