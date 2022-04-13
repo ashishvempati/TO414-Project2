@@ -78,7 +78,7 @@ summary(lg_model1)
 
 ```{r}
 # Predict Test Data with Logistical Regression q
-lg_predict <- predict(lg_model1, newdata = wq_test, response = "response")
+lg_predict <- predict(lg_model1, newdata = wq_test, type = "response")
 
 # Set the Threshold to the median of all predicted probabilities to adjust for the lower probabilities that are being calculated
 threshold = median(lg_predict)
@@ -96,7 +96,7 @@ summary(lg_model2)
 
 ```{r}
 # Predict Test Data with Logistical Regression q
-lg_predict2 <- predict(lg_model2, newdata = wq_test, response = "response")
+lg_predict2 <- predict(lg_model2, newdata = wq_test, type = "response")
 
 # Set the Threshold to the median of all predicted probabilities to adjust for the lower probabilities that are being calculated
 threshold2 = median(lg_predict2)
@@ -115,7 +115,7 @@ confusionMatrix(as.factor(lg_predict2),as.factor(wq_test_labels), positive = "1"
 ```{r}
 # Create ANN Model
 ann_wq_model <- neuralnet(formula = wq_train_labels ~ .,
-                              data = wq_train)
+                              data = wq_train, stepmax = 1e8)
 
 # Plot ANN Model
 #plot(ann_wq_model)
@@ -123,7 +123,7 @@ ann_wq_model <- neuralnet(formula = wq_train_labels ~ .,
 
 ```{r}
 ## Evaluate Model Results
-ann_wq_test_predict <- predict(ann_wq_model, wq_test, type = 'Potabality')
+ann_wq_test_predict <- predict(ann_wq_model, wq_test, type = "response")
 
 # Set the Threshold to the median of all predicted probabilities to adjust for the lower probabilities that are being calculated
 threshold = median(ann_wq_test_predict)
@@ -139,7 +139,7 @@ confusionMatrix(as.factor(ann_wq_test_predict),as.factor(wq_test_labels), positi
 ```{r}
 # Create ANN Model
 ann_wq_model2 <- neuralnet(formula = wq_train_labels ~ .,
-                              data = wq_train, hidden = 3)
+                              data = wq_train, hidden = 3, stepmax = 1e8)
 
 # Plot ANN Model
 #plot(ann_wq_model2)
@@ -147,7 +147,7 @@ ann_wq_model2 <- neuralnet(formula = wq_train_labels ~ .,
 
 ```{r}
 ## Evaluate Model Results
-ann_wq_test_predict2 <- predict(ann_wq_model2, wq_test, type = 'Potabality')
+ann_wq_test_predict2 <- predict(ann_wq_model2, wq_test, type= "response")
 
 # Set the Threshold to the median of all predicted probabilities to adjust for the lower probabilities that are being calculated
 threshold = median(ann_wq_test_predict2)
@@ -169,7 +169,7 @@ ann_wq_model3 <- neuralnet(formula = wq_train_labels ~ .,
 
 ```{r}
 ## Evaluate Model Results
-ann_wq_test_predict3 <- predict(ann_wq_model3, wq_test, type = 'Potabality')
+ann_wq_test_predict3 <- predict(ann_wq_model3, wq_test, type= "response")
 
 # Set the Threshold to the median of all predicted probabilities to adjust for the lower probabilities that are being calculated
 threshold = median(ann_wq_test_predict3)
