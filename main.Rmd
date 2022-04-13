@@ -256,7 +256,7 @@ confusionMatrix(as.factor(rf_predict),as.factor(wq_test_labels), positive = "1")
 # Level 2 Stacked Model
 ```{r}
 # Create Combined Dataframe
-combined_df <- data.frame(lg_predict, knn_pred, ann_wq_test_predict2, svm_model_pred, dt_predict, rf_predict, wq_test_labels)
+combined_df <- data.frame(lg_predict, knn_pred, ann_wq_test_predict3, svm_model_pred, dt_predict, rf_predict, wq_test_labels)
 ```
 
 ```{r}
