@@ -53,6 +53,7 @@ wq_norm <- as.data.frame(lapply(wq_random, normalize))
 
 ```{r}
 # Selects 10000 random rows for test data
+set.seed(12345)
 test_set <- sample(1:nrow(wq_norm), 650) 
 
 # Create a train set and test set
