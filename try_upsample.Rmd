@@ -1,0 +1,296 @@
+---
+title: "try"
+author: "Gianni"
+date: "15/4/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Import Libraries
+library(neuralnet)
+library(gmodels)
+library(class)
+library(caret)
+library(kernlab)
+library(C50)
+library(MASS) #for stepAIC()
+library(randomForest)
+```
+
+# Preliminary Analysis
+
+## Load Dataset
+```{r}
+wq = read.csv('water_potability.csv')
+```
+
+## Getting Data Ready for Analysis
+
+```{r}
+# Fill NA values with Median Values to adjust data distribution to conform to rest of data that is available
+wq$ph <- ifelse(is.na(wq$ph), median(wq$ph, na.rm = TRUE),wq$ph)
+wq$Sulfate <- ifelse(is.na(wq$Sulfate), median(wq$Sulfate, na.rm = TRUE),wq$Sulfate)
+wq$Trihalomethanes <- ifelse(is.na(wq$Trihalomethanes), median(wq$Trihalomethanes, na.rm = TRUE),wq$Trihalomethanes)
+summary(wq)
+
+#Upsampling the dataset
+library(caret)
+
+wq <- upSample(wq[, - ncol(wq)] , as.factor(wq$Potability))
+
+table(wq$Class)
+
+
+
+# Randomize the rows in the data (shuffling the rows)
+set.seed(12345)
+wq_random <- wq[sample(nrow(wq)),]
+
+# Normalize the data
+normalize <- function(x) {
+  return ((x - min(x)) / (max(x) - min(x)))
+}
+
+# we are going to normalize everything 
+wq_random$Class <- as.numeric(wq$Class)
+wq_norm <- as.data.frame(lapply(wq_random, normalize))
+```
+
+## Getting Train and Test Samples
+
+```{r}
+# Selects 10000 random rows for test data
+set.seed(12345)
+test_set <- sample(1:nrow(wq_norm), 650) 
+
+# Create a train set and test set
+# First the predictors - all columns except the Potability column
+wq_train <- wq_norm[-test_set, -match("Class",names(wq_norm))]
+wq_test <- wq_norm[test_set, -match("Class",names(wq_norm))]
+
+# Now the response (aka Labels) - only the Potability column
+wq_train_labels <- wq_norm[-test_set, "Class"]
+wq_test_labels <- wq_norm[test_set, "Class"]
+```
+
+------------------------------------------------------------------------
+
+# Build Logistic Regression
+
+```{r}
+# Initial Model With All Variables
+lg_model1 <- glm(wq_train_labels ~ ., data = wq_train, family = binomial(link='logit'))
+summary(lg_model1)
+```
+
+```{r}
+# Predict Test Data with Logistical Regression q
+lg_predict <- predict(lg_model1, newdata = wq_test, type = "response")
+
+# Set the Threshold to the median of all predicted probabilities to adjust for the lower probabilities that are being calculated
+threshold = median(lg_predict)
+lg_predict <- ifelse(lg_predict > threshold, 1, 0)
+
+# Evaluate Model Results
+confusionMatrix(as.factor(lg_predict),as.factor(wq_test_labels), positive = "1")
+```
+
+```{r}
+# Filtered Model with Significant Variables from Model 1 (just Solids)
+lg_model2 <- glm(wq_train_labels ~ Solids, data = wq_train, family = binomial(link='logit'))
+summary(lg_model2)
+```
+
+```{r}
+# Predict Test Data with Logistical Regression q
+lg_predict2 <- predict(lg_model2, newdata = wq_test, type = "response")
+
+# Set the Threshold to the median of all predicted probabilities to adjust for the lower probabilities that are being calculated
+threshold2 = median(lg_predict2)
+lg_predict2 <- ifelse(lg_predict2 > threshold2, 1, 0)
+
+# Evaluate Model Results
+confusionMatrix(as.factor(lg_predict2),as.factor(wq_test_labels), positive = "1")
+```
+
+------------------------------------------------------------------------
+
+# Creating ANN Model
+
+## With 1 Neuron
+
+```{r}
+# Create ANN Model
+ann_wq_model <- neuralnet(formula = wq_train_labels ~ .,
+                              data = wq_train, stepmax = 1e8)
+
+# Plot ANN Model
+#plot(ann_wq_model)
+```
+
+```{r}
+## Evaluate Model Results
+ann_wq_test_predict <- predict(ann_wq_model, wq_test, type = "response")
+
+# Set the Threshold to the median of all predicted probabilities to adjust for the lower probabilities that are being calculated
+threshold = median(ann_wq_test_predict)
+ann_wq_test_predict <- ifelse(ann_wq_test_predict > threshold , 1, 0)
+
+
+# Run Confusion Matrix
+confusionMatrix(as.factor(ann_wq_test_predict),as.factor(wq_test_labels), positive = "1")
+```
+
+## With 3 Neurons
+
+```{r}
+# Create ANN Model
+ann_wq_model2 <- neuralnet(formula = wq_train_labels ~ .,
+                              data = wq_train, hidden = 3, stepmax = 1e8)
+
+# Plot ANN Model
+#plot(ann_wq_model2)
+```
+
+```{r}
+## Evaluate Model Results
+ann_wq_test_predict2 <- predict(ann_wq_model2, wq_test, type= "response")
+
+# Set the Threshold to the median of all predicted probabilities to adjust for the lower probabilities that are being calculated
+threshold = median(ann_wq_test_predict2)
+ann_wq_test_predict2 <- ifelse(ann_wq_test_predict2 > threshold , 1, 0)
+
+
+# Run Confusion Matrix
+confusionMatrix(as.factor(ann_wq_test_predict2),as.factor(wq_test_labels), positive = "1")
+```
+
+## With 5 Neurons
+
+```{r}
+# Create ANN Model
+ann_wq_model3 <- neuralnet(formula = wq_train_labels ~ .,
+                              data = wq_train, hidden = 5, stepmax = 1e8)
+
+```
+
+```{r}
+## Evaluate Model Results
+ann_wq_test_predict3 <- predict(ann_wq_model3, wq_test, type= "response")
+
+# Set the Threshold to the median of all predicted probabilities to adjust for the lower probabilities that are being calculated
+threshold = median(ann_wq_test_predict3)
+ann_wq_test_predict3 <- ifelse(ann_wq_test_predict3 > threshold , 1, 0)
+
+
+# Run Confusion Matrix
+confusionMatrix(as.factor(ann_wq_test_predict3),as.factor(wq_test_labels), positive = "1")
+```
+
+------------------------------------------------------------------------
+
+# Creating KNN Model
+```{r}
+# Create KNN Model
+sqrt(nrow(wq))
+
+knn_pred <- knn(train = wq_train, test = wq_test,
+                      cl = wq_train_labels, k=63)
+```
+
+```{r}
+# Evaluate Model Results
+confusionMatrix(as.factor(knn_pred), as.factor(wq_test_labels), positive = "1")
+```
+
+------------------------------------------------------------------------
+
+# Creating SVM Model
+```{r}
+# Build SVM Model
+svm_model <- ksvm(wq_train_labels ~ ., data = wq_train, kernel = "rbfdot")
+svm_model
+```
+
+```{r}
+# Test Accuracy of SVM Model
+## Evaluate Model Results
+svm_model_pred <- predict(svm_model, wq_test)
+svm_model_pred <- ifelse(svm_model_pred > 0.5 , 1, 0)
+
+## Run Confusion Matrix
+confusionMatrix(as.factor(svm_model_pred), as.factor(wq_test_labels), positive = "1")
+```
+
+------------------------------------------------------------------------
+
+# Creating Decision Tree Model
+```{r}
+# Build Decision Tree Model
+wq_tree_model <- C5.0(wq_train, as.factor(wq_train_labels), trials = 1)
+
+# Decision Tree Predictions
+dt_predict <- predict(wq_tree_model, wq_test)
+summary(dt_predict)
+
+```
+
+```{r}
+## Run Confusion Matrix
+confusionMatrix(as.factor(dt_predict),as.factor(wq_test_labels), positive = "1")
+```
+
+------------------------------------------------------------------------
+
+# Create Random Forest
+```{r}
+# Build Random Forest Model
+rf_tree_model <- randomForest(wq_train, as.factor(wq_train_labels), trials = 100)
+
+# Random Forest Predictions
+rf_predict <- predict(rf_tree_model, wq_test)
+summary(rf_predict)
+
+```
+
+```{r}
+## Run Confusion Matrix
+confusionMatrix(as.factor(rf_predict),as.factor(wq_test_labels), positive = "1")
+```
+
+------------------------------------------------------------------------
+
+# Level 2 Stacked Model
+```{r}
+# Create Combined Dataframe
+combined_df <- data.frame(lg_predict, knn_pred, ann_wq_test_predict3, svm_model_pred, dt_predict, rf_predict, wq_test_labels)
+```
+
+```{r}
+# Split Combined Dataframe into Test and Train Subsets
+test_set <- sample(1:nrow(combined_df), 100) 
+combined_train <- combined_df[-test_set, ]
+combined_test <- combined_df[test_set, ]
+```
+
+```{r}
+# create a cost matrix
+error_cost <- matrix(c(0, 1, 1.25, 0), nrow = 2)
+error_cost
+
+# apply the cost matrix to the tree
+combined_cost <- C5.0(combined_train[-7], as.factor(combined_train$wq_test_labels),
+                           costs = error_cost ,trials = 100)
+combined_cost_pred <- predict(combined_cost, combined_test)
+
+## Run Confusion Matrix
+confusionMatrix(combined_cost_pred, as.factor(combined_test$wq_test_labels), positive = "1")
+```
+
+```{r}
+plot(combined_cost)
+```
