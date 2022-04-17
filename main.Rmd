@@ -233,6 +233,10 @@ summary(dt_predict)
 confusionMatrix(as.factor(dt_predict),as.factor(wq_test_labels), positive = "1")
 ```
 
+```{r}
+plot(wq_tree_model)
+```
+
 ------------------------------------------------------------------------
 
 # Create Random Forest
