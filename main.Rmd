@@ -1,5 +1,5 @@
 ---
-title: "main"
+title: "TO414 Group Project (Team 3)"
 output: html_document
 date: '2022-03-16'
 ---
@@ -8,7 +8,7 @@ date: '2022-03-16'
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r}
+```{r, message=FALSE}
 # Import Libraries
 library(neuralnet)
 library(gmodels)
@@ -68,7 +68,9 @@ wq_test_labels <- wq_norm[test_set, "Potability"]
 
 ------------------------------------------------------------------------
 
-# Build Logistic Regression
+# Our Models
+
+## Logistic Regression
 
 ```{r}
 # Initial Model With All Variables
@@ -108,9 +110,9 @@ confusionMatrix(as.factor(lg_predict2),as.factor(wq_test_labels), positive = "1"
 
 ------------------------------------------------------------------------
 
-# Creating ANN Model
+## ANN Model
 
-## With 1 Neuron
+### With 1 Neuron
 
 ```{r}
 # Create ANN Model
@@ -134,7 +136,7 @@ ann_wq_test_predict <- ifelse(ann_wq_test_predict > threshold , 1, 0)
 confusionMatrix(as.factor(ann_wq_test_predict),as.factor(wq_test_labels), positive = "1")
 ```
 
-## With 3 Neurons
+### With 3 Neurons
 
 ```{r}
 # Create ANN Model
@@ -158,7 +160,7 @@ ann_wq_test_predict2 <- ifelse(ann_wq_test_predict2 > threshold , 1, 0)
 confusionMatrix(as.factor(ann_wq_test_predict2),as.factor(wq_test_labels), positive = "1")
 ```
 
-## With 5 Neurons
+### With 5 Neurons
 
 ```{r}
 # Create ANN Model
@@ -182,7 +184,7 @@ confusionMatrix(as.factor(ann_wq_test_predict3),as.factor(wq_test_labels), posit
 
 ------------------------------------------------------------------------
 
-# Creating KNN Model
+## KNN Model
 ```{r}
 # Create KNN Model
 sqrt(nrow(wq))
@@ -198,7 +200,7 @@ confusionMatrix(as.factor(knn_pred), as.factor(wq_test_labels), positive = "1")
 
 ------------------------------------------------------------------------
 
-# Creating SVM Model
+## SVM Model
 ```{r}
 # Build SVM Model
 svm_model <- ksvm(wq_train_labels ~ ., data = wq_train, kernel = "rbfdot")
@@ -217,7 +219,7 @@ confusionMatrix(as.factor(svm_model_pred), as.factor(wq_test_labels), positive =
 
 ------------------------------------------------------------------------
 
-# Creating Decision Tree Model
+## Decision Tree Model
 ```{r}
 # Build Decision Tree Model
 wq_tree_model <- C5.0(wq_train, as.factor(wq_train_labels), trials = 1)
@@ -239,7 +241,7 @@ plot(wq_tree_model)
 
 ------------------------------------------------------------------------
 
-# Create Random Forest
+## Random Forest
 ```{r}
 # Build Random Forest Model
 rf_tree_model <- randomForest(wq_train, as.factor(wq_train_labels), trials = 100)
@@ -257,7 +259,7 @@ confusionMatrix(as.factor(rf_predict),as.factor(wq_test_labels), positive = "1")
 
 ------------------------------------------------------------------------
 
-# Level 2 Stacked Model
+## Level 2 Stacked Model
 ```{r}
 # Create Combined Dataframe
 combined_df <- data.frame(lg_predict, knn_pred, ann_wq_test_predict3, svm_model_pred, dt_predict, rf_predict, wq_test_labels)
@@ -287,3 +289,73 @@ confusionMatrix(combined_cost_pred, as.factor(combined_test$wq_test_labels), pos
 ```{r}
 plot(combined_cost)
 ```
+
+# Conclusion
+
+## Introduction
+We want to use nine numerical variables to predict if the water is safe to drink for humans.
+The variables we are taking into account are the following:
+
+
+- Ph
+- Hardness
+- Solids
+- Chloramines
+- Sulfate
+- Conductivity
+- Organic_carbon
+- Trihalomethanes
+- Turbidity
+
+We substituted the NAs of Ph, Sulfate and Trihalomethanes with the respective medians.
+
+We saw that our dataset was slightly skewed towards Zeros, being 1998 Zeros and 1278 Ones.
+Therefore, we tried to upsample the dataset, but the accuracy and kappa values of the model were strangely worse. Thus, we decided to continue our analyses without upsampling.
+
+## Our Models
+
+### Logistic model 
+- The model yields only one significant variable, namely solids.
+- In order to convert the probabilities to 0s and 1s, we set the threshold to the median of the logistic predictions. We decided to have this approach because of the skewed distribution of 0s and 1s in the dataset.
+- The accuracy is 49.38% and the kappa value is negative. This means that the variables have not a linear correlation and that the model performs worse than a random model.
+
+### Logistic model with only one variable
+- We run the same logistic regression using only the variable “Solids” - the only significant variable.
+- The result is that also the coefficient becomes significant at a level of 1%.
+- Conversely, the accuracy and the kappa value of the model are completely identical to the former ones. Therefore, we choose to continue our work with the first complete model.
+
+### ANN Models
+- ANN 1 Neuron: This model has an accuracy of 52% and a positive little kappa value (0.0431). The problem with this model is that there are plenty of false positives (188), so we will try to improve it by adding more hidden neurons.
+- ANN 3 Neurons: By adding more neurons, the accuracy increases to 60% and the kappa value swelled to 0.2092. However, the false positives are still too many.
+- ANN 5 Neurons: The ANN Model with 5 neurons delivers a slightly higher accuracy of 64% and a kappa value of 0.2831. The false positives are 149. They are still a lot, as proved by the precision ratio of only 54.15%.
+
+### KNN
+- The KNN yields similar results to the ANN but with an exception. The accuracy is about the same at 62.15% and the Kappa value is 0.078, but all the errors are shifted to the false negatives. The false positives, indeed, are only 10 and the precision metric is 70.59%, that is a huge improvement.
+
+### SVM
+- We used the rbfdot kernel that delivered and accuracy of 67.23% and a kappa value of 0.2243. There are 13 false positives and the precision metric is 82.2%. Until now, this is the best model we have.
+
+### Decision Tree
+- The accuracy of the model is 65.23% and the kappa value is 0.1905. We used only one trial because we realized that even if we tried with a greater number, the result would not change. The precision ratio is worse than SVM, amounting to 67.71%.
+
+### Random Forest
+- The accuracy of the model with 100 trials is 67.54%, with a kappa value of 0.2565. Even if the accuracy is higher than SVM’s one, the errors are more concentrated in false positives (that we want to avoid) if compared to SVM.
+
+### Stacked Model
+- We united all the predictions in a single dataframe and split it into test and train.
+- Our final stacked model has a total accuracy of 70% and a kappa value of 0.302. 
+
+## Real World Applications and Takeaways 
+Water quality is determined by many different factors, most of which are included within our database. Different measurements of certain factors help us know if the water quality is safe enough to be drinkable. Bad water quality is not only a risk to humans but it is also a risk to the whole ecosystem. One in three people do not have access to safe drinking water and in many cases, such as the Flint water crisis, the lack of clean water isn’t realized right away. Around 829,000 people die per year due to the results of unsafe drinking water. Water at the end of the day is a basic human need and continuing to monitor water quality is important. Water isn't only used for drinking but is also a necessity in many other industries. Poor water quality causes a negative effect on overall economic growth. Water plays a factor into every aspect of our life and there is a major importance in measuring and keeping track of water quality across the world.
+
+
+Upon reflection of our models, the final stacked model in particular, our overall accuracy was 70% with a kappa of .302. Our stacked model ultimately had the highest accuracy in comparison to all of the individual models and we were happy to see that the kappa value was also higher than the individual models. This made us confident in our conclusion that the stacked model was the best representation of the data that we were able to create with the resources we had. In terms of a real world context, our model demonstrates both how difficult and how important an accurate representation of water quality is. If we had looked only at the logistic model, we would have incorrectly assumed that none of the columns except Solids had a significant impact on determining water quality. By digging deeper into the data with diligent analysis we were able to see that the other variables actually did have some power in classifying the water as potable. Specifically, when looking at models like the decision tree we got a better glimpse at how the potability could be broken down. A diversified, holistic approach yielded the strongest results and led to the highest accuracy when predicting water quality. 
+
+
+Consequences of predicting water quality incorrectly can be incredibly damaging to both nearby populations and ecosystems. Model predictions can lead to both false negatives and false positives. In the case of water quality, a false positives is the most dangerous since that means that the model predicted dirty water as clean and safe to drink. We wanted to cut down on as many false positives as possible and therefore assigned a cost matrix to our final stacked model. This allowed us to cut down on the amount of false positives - we were able to cut them to just 10%. Consequences of an incorrect model can lead to health concerns for people who unknowingly drink contaminated water, a decrease in the natural biodiversity of the environment with contaminated water, and lasting negative impacts (costs, supply chain, etc)  on the businesses that operate within the contaminated space. Our analysis of the water quality data and intent to make an accurate predictive model was essential to protect each of these at risk stakeholders. 
+
+## Business Applications
+The ability to assess water quality can affect the decision-making of a multitude of organizations, from utility companies to conservation non-profits to bottled water businesses. By being able to assess water quality for a business who’s primary products or services pertain to water, they can utilize a stacked model like the one we’ve built to (1) encourage companies to enhance their internal water quality processing systems and (2) create a culture of transparency between company employees, investors, and customers. By doing so, stakeholders have the necessary knowledge to further establish their trust with these companies.We understand that organizations may already use complex models to determine the quality of water being consumed, including looking at the factors discussed in our model (such as chloramine and sulfate content), when building a model, there is always room for improvement. 
+
+
+If our model exhibited a higher prediction accuracy and demonstrated proof of reliability in experimental settings, there is opportunity to standardize model usage across companies and nonprofits. Standardization is likely most efficient when executed by a government agency, and the benefit of standardization is especially significant to society--the potability of the water being consumed will be more transparent, and individuals will know exactly what they are putting into their bodies. When trust is built between a customer and a utility company or bottled water company, those customers are likely to stay with that organization for a longer term, thus we may see decreased rates of customer churn and potentially increased consumption. However, some businesses, such as utility companies may know that the water they are processing is less safe, yet continue to distribute it to residents. So standardizing a model across utility companies may be hurtful to some, as consumers may switch to other businesses. Ultimately, this is beneficial for the good of society, as it can highlight water inequities across the US and potentially influence the government to prioritize accessibility to potable water. 
